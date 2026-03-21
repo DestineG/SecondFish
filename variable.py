@@ -29,12 +29,15 @@ class Variable:
     def backward(self):
         if self.grad is None:
             self.grad = np.ones_like(self.data)
-        
-        if self.creator is not None:
-            creater = self.get_creator()
+        funcs = [self.get_creator()]
+        while funcs:
+            creater = funcs.pop()
             input = creater.input
-            grad = creater.backward(self.grad)
-            input.backward()
+            output = creater.output
+            grad = creater.backward(output.grad)
+            input.set_grad(grad)
+            if input.get_creator() is not None:
+                funcs.append(input.get_creator())
 
     @classmethod
     def test(cls):
