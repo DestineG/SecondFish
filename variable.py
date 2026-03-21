@@ -4,6 +4,10 @@ import numpy as np
 
 class Variable:
     def __init__(self, data):
+        # 仅支持 np.ndarray 类型的数据
+        if data is not None and not isinstance(data, np.ndarray):
+            raise TypeError(f"{type(data)} is not supported.")
+
         self.data = data
         self.grad = None
         self.creator = None
@@ -47,6 +51,13 @@ class Variable:
 
         x.data = np.array(2.0)
         print(x.data)
+
+def as_array(x):
+    '''将 np 标量转换为 np.ndarray 类型
+    '''
+    if np.isscalar(x):
+        return np.array(x)
+    return x
 
 if __name__ == "__main__":
     Variable.test()
