@@ -5,25 +5,25 @@ import numpy as np
 from variable import Variable
 
 class Function:
-    def __call__(self, input):
+    def __call__(self, input: Variable) -> Variable:
         x = input.data
         y = self.forward(x)
         output = Variable(y)
         return output
 
-    def forward(self, x):
+    def forward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
-    def grad(self, input):
+    def grad(self, input: Variable, epsilon=1e-5) -> Variable:
         '''
         grad = (f(x + h) - f(x - h)) / (2 * h)
         '''
-        x = input.data
-        x1 = x - 0.00001
-        x2 = x + 0.00001
-        y1 = self.forward(x1)
-        y2 = self.forward(x2)
-        return (y2 - y1) / (x2 - x1)
+        x0 = Variable(input.data - epsilon)
+        x1 = Variable(input.data + epsilon)
+        y1 = self(x0)
+        y2 = self(x1)
+        grad = (y2.data - y1.data) / (2 * epsilon)
+        return Variable(grad)
 
     @classmethod
     def test(cls):
@@ -33,15 +33,17 @@ class Function:
         print("#" * 10, f" Testing {cls.__name__}... ", "#" * 10)
         print(f"Input: {x.data}")
         print(f"Output: {y.data}")
-        print(f"Gradient: {f.grad(x)}")
+        print(f"Gradient: {f.grad(x).data}")
 
 class Square(Function):
-    def forward(self, x):
-        return x ** 2
+    def forward(self, input: np.ndarray) -> np.ndarray:
+        output = input ** 2
+        return output
 
 class Exp(Function):
-    def forward(self, x):
-        return np.exp(x)
+    def forward(self, input: np.ndarray) -> np.ndarray:
+        output = np.exp(input)
+        return output
 
 if __name__ == "__main__":
     Square.test()
