@@ -5,6 +5,16 @@ import numpy as np
 class Variable:
     def __init__(self, data):
         self.data = data
+        self.grad = None
+
+    def set_grad(self, grad):
+        self.grad = grad
+    
+    def get_grad(self):
+        return self.grad
+
+    def clear_grad(self):
+        self.grad = None
 
     @classmethod
     def test(cls):

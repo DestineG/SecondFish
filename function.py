@@ -6,24 +6,31 @@ from variable import Variable
 
 class Function:
     def __call__(self, input: Variable) -> Variable:
+        # Variable -> np.ndarray
         x = input.data
+
+        # result of forward()
         y = self.forward(x)
-        output = Variable(y)
-        return output
+
+        # result of grad()
+        grad = self.grad(x)
+        input.set_grad(grad)
+
+        return Variable(y)
 
     def forward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
-    def grad(self, input: Variable, epsilon=1e-5) -> Variable:
+    def grad(self, input: np.ndarray, epsilon=1e-5) -> np.ndarray:
         '''
         grad = (f(x + h) - f(x - h)) / (2 * h)
         '''
-        x0 = Variable(input.data - epsilon)
-        x1 = Variable(input.data + epsilon)
-        y1 = self(x0)
-        y2 = self(x1)
-        grad = (y2.data - y1.data) / (2 * epsilon)
-        return Variable(grad)
+        x0 = input - epsilon
+        x1 = input + epsilon
+        y1 = self.forward(x0)
+        y2 = self.forward(x1)
+        grad = (y2 - y1) / (2 * epsilon)
+        return grad
 
     @classmethod
     def test(cls):
@@ -33,7 +40,7 @@ class Function:
         print("#" * 10, f" Testing {cls.__name__}... ", "#" * 10)
         print(f"Input: {x.data}")
         print(f"Output: {y.data}")
-        print(f"Gradient: {f.grad(x).data}")
+        print(f"Gradient: {x.get_grad()}")
 
 class Square(Function):
     def forward(self, input: np.ndarray) -> np.ndarray:
