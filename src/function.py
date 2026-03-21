@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from variable import Variable, as_array
+from .variable import Variable, as_array
 
 class Function:
     def __call__(self, input: Variable) -> Variable:
