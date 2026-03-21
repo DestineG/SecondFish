@@ -6,6 +6,7 @@ class Variable:
     def __init__(self, data):
         self.data = data
         self.grad = None
+        self.creator = None
 
     def set_grad(self, grad):
         self.grad = grad
@@ -15,6 +16,22 @@ class Variable:
 
     def clear_grad(self):
         self.grad = None
+    
+    def set_creator(self, func):
+        self.creator = func
+    
+    def get_creator(self):
+        return self.creator
+    
+    def clear_creator(self):
+        self.creator = None
+    
+    def backward(self):
+        if self.grad is None:
+            self.grad = np.ones_like(self.data)
+        
+        assert self.creator is not None, "No creator function found for this variable."
+        self.creator.backward(self.grad)
 
     @classmethod
     def test(cls):

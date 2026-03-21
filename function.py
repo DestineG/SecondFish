@@ -11,58 +11,46 @@ class Function:
 
         # result of forward()
         y = self.forward(x)
+        output = Variable(y)
 
         # record the input variable for backward()
         self.input = input
+        self.output = output
 
-        return Variable(y)
+        # record the creator function for backward()
+        output.set_creator(self)
+
+        return output
 
     def forward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
     
-    def backward(self, input: np.ndarray) -> np.ndarray:
+    def backward(self, input: np.ndarray):
         raise NotImplementedError()
-
-    def grad(self, input: np.ndarray, epsilon=1e-5) -> np.ndarray:
-        '''
-        grad = (f(x + h) - f(x - h)) / (2 * h)
-        '''
-        x0 = input - epsilon
-        x1 = input + epsilon
-        y1 = self.forward(x0)
-        y2 = self.forward(x1)
-        grad = (y2 - y1) / (2 * epsilon)
-        return grad
-
-    @classmethod
-    def test(cls):
-        x = Variable(np.array([3.0, 4.0]))
-        f = cls()
-        y = f(x)
-        print("#" * 10, f" Testing {cls.__name__}... ", "#" * 10)
-        print(f"Input: {x.data}")
-        print(f"Output: {y.data}")
-        print(f"Gradient: {x.get_grad()}")
 
 class Square(Function):
     def forward(self, input: np.ndarray) -> np.ndarray:
         output = input ** 2
         return output
     
-    def backward(self, gy: np.ndarray) -> np.ndarray:
+    def backward(self, gy: np.ndarray):
         x = self.input.data
         gx = 2 * x * gy
-        return gx
+        self.input.set_grad(gx)
+        if self.input.get_creator() is not None:
+            self.input.get_creator().backward(gx)
 
 class Exp(Function):
     def forward(self, input: np.ndarray) -> np.ndarray:
         output = np.exp(input)
         return output
 
-    def backward(self, gy: np.ndarray) -> np.ndarray:
+    def backward(self, gy: np.ndarray):
         x = self.input.data
         gx = np.exp(x) * gy
-        return gx
+        self.input.set_grad(gx)
+        if self.input.get_creator() is not None:
+            self.input.get_creator().backward(gx)
 
 if __name__ == "__main__":
     A = Square()
@@ -72,10 +60,7 @@ if __name__ == "__main__":
     a = A(x)
     b = B(a)
     y = C(b)
-    y.set_grad(np.array([1.0, 1.0]))
-    b.set_grad(C.backward(y.get_grad()))
-    a.set_grad(B.backward(b.get_grad()))
-    x.set_grad(A.backward(a.get_grad()))
-    print(f"Input: {x.data}")
-    print(f"Output: {y.data}")
-    print(f"Gradient: {x.get_grad()}")
+    y.backward()
+    print(x.get_grad())
+    print(a.get_grad())
+    print(b.get_grad())
