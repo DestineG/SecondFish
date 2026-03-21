@@ -30,8 +30,11 @@ class Variable:
         if self.grad is None:
             self.grad = np.ones_like(self.data)
         
-        assert self.creator is not None, "No creator function found for this variable."
-        self.creator.backward(self.grad)
+        if self.creator is not None:
+            creater = self.get_creator()
+            input = creater.input
+            grad = creater.backward(self.grad)
+            input.backward()
 
     @classmethod
     def test(cls):

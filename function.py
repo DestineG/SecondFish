@@ -25,7 +25,7 @@ class Function:
     def forward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
     
-    def backward(self, input: np.ndarray):
+    def backward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
 class Square(Function):
@@ -33,24 +33,23 @@ class Square(Function):
         output = input ** 2
         return output
     
-    def backward(self, gy: np.ndarray):
+    def backward(self, gy: np.ndarray) -> np.ndarray:
         x = self.input.data
         gx = 2 * x * gy
         self.input.set_grad(gx)
-        if self.input.get_creator() is not None:
-            self.input.get_creator().backward(gx)
+        return gx
+
 
 class Exp(Function):
     def forward(self, input: np.ndarray) -> np.ndarray:
         output = np.exp(input)
         return output
 
-    def backward(self, gy: np.ndarray):
+    def backward(self, gy: np.ndarray) -> np.ndarray:
         x = self.input.data
         gx = np.exp(x) * gy
         self.input.set_grad(gx)
-        if self.input.get_creator() is not None:
-            self.input.get_creator().backward(gx)
+        return gx
 
 if __name__ == "__main__":
     A = Square()
