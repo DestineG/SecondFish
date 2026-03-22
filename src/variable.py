@@ -32,7 +32,7 @@ class Variable:
     def clear_creator(self):
         self.creator = None
     
-    def backward(self):
+    def backward(self, retain_grad=False):
         if self.grad is None:
             self.grad = np.ones_like(self.data)
         
@@ -57,6 +57,10 @@ class Variable:
                     x.grad = x.grad + gx
                 if x.get_creator() is not None:
                     add_func(x.get_creator())
+            
+            if not retain_grad:
+                for y in creater.outputs:
+                    y().grad = None
 
     @classmethod
     def test(cls):

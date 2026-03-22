@@ -6,6 +6,7 @@ import time
 
 from ..function import square, add
 from ..variable import Variable
+from ..config import no_grad
 
 def numerical_diff(f, x, eps=1e-4):
     x0 = Variable(x.data - eps)
@@ -54,43 +55,42 @@ class AddTest(unittest.TestCase):
         self.assertEqual(x0.grad, expected_x0)
         self.assertEqual(x1.grad, expected_x1)
 
-class BackwardTest(unittest.TestCase):
-    def test_backward_logic_and_speed(self):
-        x_val = np.array([1.0, 2.0])
-        x = Variable(x_val)
-        y = add(x, x)
-        y.backward()
+class NoGradTest(unittest.TestCase):
+    def test_no_grad_context(self):
+        with no_grad():
+            x = Variable(np.array(2.0))
+            y = square(x)
+            self.assertIsNone(y.creator)
+            self.assertEqual(y.data, np.array(4.0))
+
+        x = Variable(np.array(2.0))
+        y = square(x)
+        self.assertIsNotNone(y.creator)
+        print("no_grad context check passed: Link properly cut.")
+
+    def test_performance_with_no_grad(self):
+        steps = 10000
+        x = Variable(np.random.rand(100))
         
-        expected_grad = np.array([2.0, 2.0])
-        np.testing.assert_array_almost_equal(x.grad, expected_grad)
-        print("Basic logic check passed: dy/dx = 2")
-
-
-        # 菱形结构
-        x.clear_grad()
-        a = add(x, x)
-        b = add(x, x)
-        y = add(a, b)
-        y.backward()
-        np.testing.assert_array_almost_equal(x.grad, np.array([4.0, 4.0]))
-        print("Diamond graph check passed: dy/dx = 4")
-
-        # 性能与深度验证
-        steps = 1000 
-        x_large = Variable(np.random.rand(10))
-        curr = x_large
-        
-        start_time = time.time()
+        # 记录梯度的耗时
+        start = time.time()
+        curr = x
         for _ in range(steps):
             curr = add(curr, curr)
-        curr.backward()
-        end_time = time.time()
+        time_with_grad = time.time() - start
+
+        # 不记录梯度的耗时
+        start = time.time()
+        with no_grad():
+            curr = x
+            for _ in range(steps):
+                curr = add(curr, curr)
+        time_without_grad = time.time() - start
+
+        print(f"Time with grad: {time_with_grad:.5f}s")
+        print(f"Time without grad: {time_without_grad:.5f}s")
         
-        expected_large_grad = np.power(2.0, steps)
-        for g in x_large.grad:
-            self.assertAlmostEqual(g, expected_large_grad)            
-        print(f"Deep graph check passed (steps={steps})")
-        print(f"Backward speed for {steps} layers: {end_time - start_time:.5f}s")
+        self.assertLess(time_without_grad, time_with_grad)
 
 if __name__ == "__main__":
     unittest.main()

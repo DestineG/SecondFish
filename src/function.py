@@ -4,6 +4,7 @@ import numpy as np
 import weakref
 
 from .variable import Variable, as_array
+from .config import Config
 
 class Function:
     def __call__(self, *inputs) -> Variable | list[Variable]:
@@ -15,14 +16,15 @@ class Function:
             y = (y,)
         outputs = [Variable(as_array(y_i)) for y_i in y]
 
-        # 用于拓扑排序，生成数越大，越靠近输出端
-        self.generation = max([x.generation for x in inputs])
+        if Config.enable_backprop:
+            # 用于拓扑排序，生成数越大，越靠近输出端
+            self.generation = max([x.generation for x in inputs])
 
-        for output in outputs:
-            output.set_creator(self)
+            for output in outputs:
+                output.set_creator(self)
 
-        self.inputs = inputs
-        self.outputs = [weakref.ref(output) for output in outputs]
+            self.inputs = inputs
+            self.outputs = [weakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]
 
