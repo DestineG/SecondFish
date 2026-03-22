@@ -3,6 +3,9 @@
 import numpy as np
 
 class Variable:
+    # NOTE: 定义 __array_priority__ 属性，确保当 Variable 与 np.ndarray 进行运算时，Variable 的运算方法被优先调用
+    __array_priority__ = 200
+
     def __init__(self, data, name=None):
         # 仅支持 np.ndarray 类型的数据
         if data is not None and not isinstance(data, np.ndarray):
@@ -102,11 +105,16 @@ class Variable:
         print(len(x))
 
 def as_array(x):
-    '''将 np 标量转换为 np.ndarray 类型
+    '''将标量转换为 np.ndarray 类型
     '''
     if np.isscalar(x):
         return np.array(x)
     return x
+
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj
+    return Variable(obj)
 
 if __name__ == "__main__":
     Variable.test()

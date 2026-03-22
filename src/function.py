@@ -3,11 +3,12 @@
 import numpy as np
 import weakref
 
-from .variable import Variable, as_array
+from .variable import Variable, as_array, as_variable
 from .config import Config
 
 class Function:
     def __call__(self, *inputs) -> Variable | list[Variable]:
+        inputs = [as_variable(x) for x in inputs]
         xs = [x.data for x in inputs]
 
         y = self.forward(*xs)
@@ -42,37 +43,87 @@ class Add(Function):
         return gy, gy
 
 def add(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
     return Add()(x0, x1)
+
+class Sub(Function):
+    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        return x0 - x1
+
+    def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return gy, -gy
+
+def sub(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
+    return Sub()(x0, x1)
+
+def rsub(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
+    return Sub()(x1, x0)
 
 class Mul(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
         return x0 * x1
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        x0, x1 = self.inputs
-        return gy * x1.data, gy * x0.data
+        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        return gy * x1, gy * x0
 
 def mul(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
     return Mul()(x0, x1)
 
-class Square(Function):
+class Div(Function):
+    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        return x0 / x1
+
+    def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        gx0 = gy / x1
+        gx1 = gy * (-x0 / x1 ** 2)
+        return gx0, gx1
+
+def div(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
+    return Div()(x0, x1)
+
+def rdiv(x0: Variable, x1: Variable) -> Variable:
+    x1 = as_array(x1)
+    return Div()(x1, x0)
+
+class Neg(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
-        return x ** 2
+        return -x
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        return -gy
+
+def neg(x: Variable) -> Variable:
+    return Neg()(x)
+
+class Pow(Function):
+    def __init__(self, c: float):
+        self.c = c
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return x ** self.c
 
     def backward(self, gy: np.ndarray) -> np.ndarray:
         x = self.inputs[0].data
-        gx = 2 * x * gy
+        c = self.c
+        gx = gy * c * x ** (c - 1)
         return gx
 
-def square(x: Variable) -> Variable:
-    return Square()(x)
+def pow_(x: Variable, c: float) -> Variable:
+    return Pow(c)(x)
+
 
 if __name__ == "__main__":
     x0 = Variable(np.array(1.0))
     x1 = Variable(np.array(2.0))
     y0 = add(x0, x1)
     y2 = add(y0, x0)
-    y1 = square(y2)
+    y1 = pow_(y2, 2)
     y1.backward()
     print(x0.grad)
     print(x1.grad)
