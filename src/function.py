@@ -3,8 +3,20 @@
 import numpy as np
 import weakref
 
-from .variable import Variable, as_array, as_variable
+from .variable import Variable
 from .config import Config
+
+def as_array(x):
+    '''将标量转换为 np.ndarray 类型
+    '''
+    if np.isscalar(x):
+        return np.array(x)
+    return x
+
+def as_variable(obj):
+    if isinstance(obj, Variable):
+        return obj
+    return Variable(obj)
 
 class Function:
     def __call__(self, *inputs) -> Variable | list[Variable]:
@@ -116,6 +128,22 @@ class Pow(Function):
 
 def pow_(x: Variable, c: float) -> Variable:
     return Pow(c)(x)
+
+def setup_operators():
+    # 动态将函数绑定到 Variable 的魔法方法上
+    # 调用方式
+    # var/other: op(var, other)
+    # other/var: rop(var, other)
+    Variable.__add__ = add          # Variable + other
+    Variable.__radd__ = add         # other + Variable
+    Variable.__sub__ = sub          # Variable - other
+    Variable.__rsub__ = rsub        # other - Variable
+    Variable.__mul__ = mul          # Variable * other
+    Variable.__rmul__ = mul         # other * Variable
+    Variable.__truediv__ = div      # Variable / other
+    Variable.__rtruediv__ = rdiv    # other / Variable
+    Variable.__neg__ = neg          # -Variable
+    Variable.__pow__ = pow_          # Variable ** other
 
 
 if __name__ == "__main__":

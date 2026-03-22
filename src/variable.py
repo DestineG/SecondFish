@@ -104,17 +104,5 @@ class Variable:
         print(x.dtype)
         print(len(x))
 
-def as_array(x):
-    '''将标量转换为 np.ndarray 类型
-    '''
-    if np.isscalar(x):
-        return np.array(x)
-    return x
-
-def as_variable(obj):
-    if isinstance(obj, Variable):
-        return obj
-    return Variable(obj)
-
 if __name__ == "__main__":
     Variable.test()
