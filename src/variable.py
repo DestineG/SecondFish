@@ -36,12 +36,17 @@ class Variable:
         funcs = [self.get_creator()]
         while funcs:
             creater = funcs.pop()
-            input = creater.input
-            output = creater.output
-            grad = creater.backward(output.grad)
-            input.set_grad(grad)
-            if input.get_creator() is not None:
-                funcs.append(input.get_creator())
+            gys = [output.grad for output in creater.outputs]   # 获取输出的梯度
+            gxs = creater.backward(*gys)                        # 计算输入的梯度
+            if not isinstance(gxs, tuple):
+                gxs = (gxs,)
+            for x, gx in zip(creater.inputs, gxs):
+                if x.grad is None:                              # 如果 x.grad 还没有值，则直接设置
+                    x.grad = gx
+                else:                                           # 否则进行累加
+                    x.grad = x.grad + gx
+                if x.get_creator() is not None:
+                    funcs.append(x.get_creator())
 
     @classmethod
     def test(cls):

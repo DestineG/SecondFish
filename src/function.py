@@ -5,24 +5,21 @@ import numpy as np
 from .variable import Variable, as_array
 
 class Function:
-    def __call__(self, input: Variable) -> Variable:
-        # Variable -> np.ndarray
-        x = input.data
+    def __call__(self, *inputs) -> Variable | list[Variable]:
+        xs = [x.data for x in inputs]
 
-        # result of forward()
-        y = self.forward(x)
-        # 0 维的 np.ndarray 输入可能会得到 0 维的 np 标量
-        # 因此将 np 标量转换为 np.ndarray 类型
-        output = Variable(as_array(y))
+        y = self.forward(*xs)
 
-        # record the input variable for backward()
-        self.input = input
-        self.output = output
+        if not isinstance(y, tuple):
+            y = (y,)
+        outputs = [Variable(as_array(y_i)) for y_i in y]
+        for output in outputs:
+            output.set_creator(self)
 
-        # record the creator function for backward()
-        output.set_creator(self)
+        self.inputs = inputs
+        self.outputs = outputs
 
-        return output
+        return outputs if len(outputs) > 1 else outputs[0]
 
     def forward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
@@ -30,41 +27,34 @@ class Function:
     def backward(self, input: np.ndarray) -> np.ndarray:
         raise NotImplementedError()
 
+class Add(Function):
+    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        return x0 + x1
+
+    def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        return gy, gy
+
+def add(x0: Variable, x1: Variable) -> Variable:
+    return Add()(x0, x1)
+
 class Square(Function):
-    def forward(self, input: np.ndarray) -> np.ndarray:
-        output = input ** 2
-        return output
-    
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return x ** 2
+
     def backward(self, gy: np.ndarray) -> np.ndarray:
-        x = self.input.data
+        x = self.inputs[0].data
         gx = 2 * x * gy
-        self.input.set_grad(gx)
-        return gx
-
-
-class Exp(Function):
-    def forward(self, input: np.ndarray) -> np.ndarray:
-        output = np.exp(input)
-        return output
-
-    def backward(self, gy: np.ndarray) -> np.ndarray:
-        x = self.input.data
-        gx = np.exp(x) * gy
-        self.input.set_grad(gx)
         return gx
 
 def square(x: Variable) -> Variable:
     return Square()(x)
 
-def exp(x: Variable) -> Variable:
-    return Exp()(x)
-
 if __name__ == "__main__":
-    x = Variable(np.array([0.5, 0.7]))
-    a = square(x)
-    b = exp(a)
-    y = square(b)
-    y.backward()
-    print(x.get_grad())
-    print(a.get_grad())
-    print(b.get_grad())
+    x0 = Variable(np.array(1.0))
+    x1 = Variable(np.array(2.0))
+    y0 = add(x0, x1)
+    y2 = add(y0, x0)
+    y1 = square(y2)
+    y1.backward()
+    print(x0.grad)
+    print(x1.grad)
