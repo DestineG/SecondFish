@@ -44,6 +44,17 @@ class Add(Function):
 def add(x0: Variable, x1: Variable) -> Variable:
     return Add()(x0, x1)
 
+class Mul(Function):
+    def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
+        return x0 * x1
+
+    def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        x0, x1 = self.inputs
+        return gy * x1.data, gy * x0.data
+
+def mul(x0: Variable, x1: Variable) -> Variable:
+    return Mul()(x0, x1)
+
 class Square(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
         return x ** 2
