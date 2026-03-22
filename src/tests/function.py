@@ -2,6 +2,7 @@
 
 import unittest
 import numpy as np
+import time
 
 from ..function import square, add
 from ..variable import Variable
@@ -53,5 +54,43 @@ class AddTest(unittest.TestCase):
         self.assertEqual(x0.grad, expected_x0)
         self.assertEqual(x1.grad, expected_x1)
 
-if __name__ == '__main__':
+class BackwardTest(unittest.TestCase):
+    def test_backward_logic_and_speed(self):
+        x_val = np.array([1.0, 2.0])
+        x = Variable(x_val)
+        y = add(x, x)
+        y.backward()
+        
+        expected_grad = np.array([2.0, 2.0])
+        np.testing.assert_array_almost_equal(x.grad, expected_grad)
+        print("Basic logic check passed: dy/dx = 2")
+
+
+        # 菱形结构
+        x.clear_grad()
+        a = add(x, x)
+        b = add(x, x)
+        y = add(a, b)
+        y.backward()
+        np.testing.assert_array_almost_equal(x.grad, np.array([4.0, 4.0]))
+        print("Diamond graph check passed: dy/dx = 4")
+
+        # 性能与深度验证
+        steps = 1000 
+        x_large = Variable(np.random.rand(10))
+        curr = x_large
+        
+        start_time = time.time()
+        for _ in range(steps):
+            curr = add(curr, curr)
+        curr.backward()
+        end_time = time.time()
+        
+        expected_large_grad = np.power(2.0, steps)
+        for g in x_large.grad:
+            self.assertAlmostEqual(g, expected_large_grad)            
+        print(f"Deep graph check passed (steps={steps})")
+        print(f"Backward speed for {steps} layers: {end_time - start_time:.5f}s")
+
+if __name__ == "__main__":
     unittest.main()

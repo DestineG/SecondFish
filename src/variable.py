@@ -11,6 +11,7 @@ class Variable:
         self.data = data
         self.grad = None
         self.creator = None
+        self.generation = 0
 
     def set_grad(self, grad):
         self.grad = grad
@@ -23,6 +24,7 @@ class Variable:
     
     def set_creator(self, func):
         self.creator = func
+        self.generation = func.generation + 1
     
     def get_creator(self):
         return self.creator
@@ -33,7 +35,15 @@ class Variable:
     def backward(self):
         if self.grad is None:
             self.grad = np.ones_like(self.data)
-        funcs = [self.get_creator()]
+        
+        funcs = []
+        seen_set = set()  # 避免重复添加函数
+        def add_func(f):
+            if f not in seen_set:
+                funcs.append(f)
+                seen_set.add(f)
+                funcs.sort(key=lambda x: x.generation)
+        add_func(self.get_creator())
         while funcs:
             creater = funcs.pop()
             gys = [output.grad for output in creater.outputs]   # 获取输出的梯度
@@ -46,7 +56,7 @@ class Variable:
                 else:                                           # 否则进行累加
                     x.grad = x.grad + gx
                 if x.get_creator() is not None:
-                    funcs.append(x.get_creator())
+                    add_func(x.get_creator())
 
     @classmethod
     def test(cls):

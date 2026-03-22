@@ -13,6 +13,10 @@ class Function:
         if not isinstance(y, tuple):
             y = (y,)
         outputs = [Variable(as_array(y_i)) for y_i in y]
+
+        # 用于拓扑排序，生成数越大，越靠近输出端
+        self.generation = max([x.generation for x in inputs])
+
         for output in outputs:
             output.set_creator(self)
 
