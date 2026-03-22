@@ -46,7 +46,7 @@ class Variable:
         add_func(self.get_creator())
         while funcs:
             creater = funcs.pop()
-            gys = [output.grad for output in creater.outputs]   # 获取输出的梯度
+            gys = [output().grad for output in creater.outputs]   # 获取输出的梯度(调用weakref返回变量)
             gxs = creater.backward(*gys)                        # 计算输入的梯度
             if not isinstance(gxs, tuple):
                 gxs = (gxs,)

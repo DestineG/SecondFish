@@ -1,6 +1,7 @@
 # function.py
 
 import numpy as np
+import weakref
 
 from .variable import Variable, as_array
 
@@ -21,7 +22,7 @@ class Function:
             output.set_creator(self)
 
         self.inputs = inputs
-        self.outputs = outputs
+        self.outputs = [weakref.ref(output) for output in outputs]
 
         return outputs if len(outputs) > 1 else outputs[0]
 
