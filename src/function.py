@@ -54,7 +54,7 @@ class Add(Function):
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return gy, gy
 
-def add(x0: Variable, x1: Variable) -> Variable:
+def add(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Add()(x0, x1)
 
@@ -65,11 +65,11 @@ class Sub(Function):
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         return gy, -gy
 
-def sub(x0: Variable, x1: Variable) -> Variable:
+def sub(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Sub()(x0, x1)
 
-def rsub(x0: Variable, x1: Variable) -> Variable:
+def rsub(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Sub()(x1, x0)
 
@@ -81,7 +81,7 @@ class Mul(Function):
         x0, x1 = self.inputs[0].data, self.inputs[1].data
         return gy * x1, gy * x0
 
-def mul(x0: Variable, x1: Variable) -> Variable:
+def mul(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Mul()(x0, x1)
 
@@ -95,11 +95,11 @@ class Div(Function):
         gx1 = gy * (-x0 / x1 ** 2)
         return gx0, gx1
 
-def div(x0: Variable, x1: Variable) -> Variable:
+def div(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Div()(x0, x1)
 
-def rdiv(x0: Variable, x1: Variable) -> Variable:
+def rdiv(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
     return Div()(x1, x0)
 
@@ -145,13 +145,22 @@ def setup_operators():
     Variable.__neg__ = neg          # -Variable
     Variable.__pow__ = pow_          # Variable ** other
 
+class Sin(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.sin(x)
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        x = self.inputs[0].data
+        gx = gy * np.cos(x)
+        return gx
+
+def sin(x: Variable) -> Variable:
+    return Sin()(x)
+
 
 if __name__ == "__main__":
-    x0 = Variable(np.array(1.0))
-    x1 = Variable(np.array(2.0))
-    y0 = add(x0, x1)
-    y2 = add(y0, x0)
-    y1 = pow_(y2, 2)
-    y1.backward()
-    print(x0.grad)
-    print(x1.grad)
+    x0 = Variable(np.array(np.pi/4), name="x0")
+    # x1 = Variable(np.array(2.0))
+    y0 = sin(x0)
+    y0.backward()
+    print(f"y0={y0.data}, x0.grad={x0.grad}")
