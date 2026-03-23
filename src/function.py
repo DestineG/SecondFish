@@ -78,7 +78,7 @@ class Mul(Function):
         return x0 * x1
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        x0, x1 = self.inputs
         return gy * x1, gy * x0
 
 def mul(x0: Variable, x1) -> Variable:
@@ -90,7 +90,7 @@ class Div(Function):
         return x0 / x1
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        x0, x1 = self.inputs[0].data, self.inputs[1].data
+        x0, x1 = self.inputs
         gx0 = gy / x1
         gx1 = gy * (-x0 / x1 ** 2)
         return gx0, gx1
@@ -121,7 +121,7 @@ class Pow(Function):
         return x ** self.c
 
     def backward(self, gy: np.ndarray) -> np.ndarray:
-        x = self.inputs[0].data
+        x, = self.inputs
         c = self.c
         gx = gy * c * x ** (c - 1)
         return gx
@@ -150,7 +150,7 @@ class Sin(Function):
         return np.sin(x)
 
     def backward(self, gy: np.ndarray) -> np.ndarray:
-        x = self.inputs[0].data
+        x = self.inputs
         gx = gy * np.cos(x)
         return gx
 

@@ -1,6 +1,7 @@
 # variable.py
 
 import numpy as np
+from .config import using_config
 
 class Variable:
     # NOTE: 定义 __array_priority__ 属性，确保当 Variable 与 np.ndarray 进行运算时，Variable 的运算方法被优先调用
@@ -48,7 +49,7 @@ class Variable:
         self.grad = grad
     
     def get_grad(self):
-        return self.grad
+        return self.grad.data
 
     def clear_grad(self):
         self.grad = None
@@ -63,9 +64,9 @@ class Variable:
     def clear_creator(self):
         self.creator = None
     
-    def backward(self, retain_grad=False):
+    def backward(self, retain_grad=False, create_graph=False):
         if self.grad is None:
-            self.grad = np.ones_like(self.data)
+            self.set_grad(Variable(np.ones_like(self.data)))
         
         funcs = []
         seen_set = set()  # 避免重复添加函数
@@ -79,19 +80,20 @@ class Variable:
             creater = funcs.pop()
             gys = [output().grad for output in creater.outputs]   # 获取输出的梯度(调用weakref返回变量)
             gxs = creater.backward(*gys)                        # 计算输入的梯度
-            if not isinstance(gxs, tuple):
-                gxs = (gxs,)
-            for x, gx in zip(creater.inputs, gxs):
-                if x.grad is None:                              # 如果 x.grad 还没有值，则直接设置
-                    x.grad = gx
-                else:                                           # 否则进行累加
-                    x.grad = x.grad + gx
-                if x.get_creator() is not None:
-                    add_func(x.get_creator())
-            
-            if not retain_grad:
-                for y in creater.outputs:
-                    y().grad = None
+            with using_config("enable_backprop", create_graph):
+                if not isinstance(gxs, tuple):
+                    gxs = (gxs,)
+                for x, gx in zip(creater.inputs, gxs):
+                    if x.grad is None:                              # 如果 x.grad 还没有值，则直接设置
+                        x.grad = gx
+                    else:                                           # 否则进行累加
+                        x.grad = x.grad + gx
+                    if x.get_creator() is not None:
+                        add_func(x.get_creator())
+                
+                if not retain_grad:
+                    for y in creater.outputs:
+                        y().grad = None
 
     @classmethod
     def test(cls):
