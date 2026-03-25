@@ -145,19 +145,6 @@ def setup_operators():
     Variable.__neg__ = neg          # -Variable
     Variable.__pow__ = pow_          # Variable ** other
 
-class Sin(Function):
-    def forward(self, x: np.ndarray) -> np.ndarray:
-        return np.sin(x)
-
-    def backward(self, gy: np.ndarray) -> np.ndarray:
-        x = self.inputs
-        gx = gy * np.cos(x)
-        return gx
-
-def sin(x: Variable) -> Variable:
-    return Sin()(x)
-
-
 if __name__ == "__main__":
     x0 = Variable(np.array(np.pi/4), name="x0")
     # x1 = Variable(np.array(2.0))
