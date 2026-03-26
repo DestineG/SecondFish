@@ -128,3 +128,17 @@ class Sum(Function):
 
 def sum(x, axis=None, keepdims=False):
     return Sum(axis, keepdims)(x)
+
+class MatMul(Function):
+    def forward(self, x, W):
+        y = x.dot(W)
+        return y
+    
+    def backward(self, gy):
+        x, W = self.inputs
+        gx = matmul(gy, W.T)
+        gw = matmul(x.T, gy)
+        return gx, gw
+
+def matmul(x, W):
+    return MatMul()(x, W)
