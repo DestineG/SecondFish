@@ -144,10 +144,3 @@ def setup_operators():
     Variable.__rtruediv__ = rdiv    # other / Variable
     Variable.__neg__ = neg          # -Variable
     Variable.__pow__ = pow_          # Variable ** other
-
-if __name__ == "__main__":
-    x0 = Variable(np.array(np.pi/4), name="x0")
-    # x1 = Variable(np.array(2.0))
-    y0 = sin(x0)
-    y0.backward()
-    print(f"y0={y0.data}, x0.grad={x0.grad}")

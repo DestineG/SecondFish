@@ -1,7 +1,6 @@
 import numpy as np
 
-from .function import Function
-from .variable import Variable
+from .function import Function, as_variable
 
 class Sin(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
@@ -12,7 +11,7 @@ class Sin(Function):
         gx = gy * cos(x)
         return gx
 
-def sin(x: Variable) -> Variable:
+def sin(x):
     return Sin()(x)
 
 class Cos(Function):
@@ -24,7 +23,7 @@ class Cos(Function):
         gx = gy * (-sin(x))
         return gx
 
-def cos(x: Variable) -> Variable:
+def cos(x):
     return Cos()(x)
 
 class Tanh(Function):
@@ -36,5 +35,34 @@ class Tanh(Function):
         gx = gy * (1 - y * y)
         return gx
 
-def tanh(x: Variable) -> Variable:
+def tanh(x):
     return Tanh()(x)
+
+class Reshape(Function):
+    def __init__(self, shape):
+        self.shape = shape
+    
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.reshape(self.shape)
+        return y
+
+    def backward(self, gy):
+        return reshape(gy, self.x_shape)
+
+def reshape(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return Reshape(shape)(x)
+
+class Transpose(Function):
+    def forward(self, x):
+        y = np.transpose(x)
+        return y
+    
+    def backward(self, gy):
+        gx = transpose(gy)
+        return gx
+
+def transpose(x):
+    return Transpose()(x)

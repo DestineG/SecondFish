@@ -95,6 +95,20 @@ class Variable:
                     for y in creater.outputs:
                         y().grad = None
 
+    def reshape(self, *shape):
+        from . import functions as F 
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return F.reshape(self, shape)
+    
+    def transpose(self):
+        from . import functions as F
+        return F.transpose(self)
+    
+    @property
+    def T(self):
+        return self.transpose()
+
     @classmethod
     def test(cls):
         data = np.array([[1.0, 2.0, 3.0], [1.0, 2.0, 3.0]])
