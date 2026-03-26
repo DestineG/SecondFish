@@ -38,6 +38,30 @@ class Tanh(Function):
 def tanh(x):
     return Tanh()(x)
 
+class exp(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.exp(x)
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        y = self.outputs[0]()
+        gx = gy * y
+        return gx
+
+def exp(x):
+    return exp()(x)
+
+class Log(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.log(x)
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        x = self.inputs[0].data
+        gx = gy / x
+        return gx
+
+def log(x):
+    return Log()(x)
+
 class ReLU(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
         return np.maximum(0, x)
@@ -49,6 +73,18 @@ class ReLU(Function):
 
 def relu(x):
     return ReLU()(x)
+
+class Sigmoid(Function):
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.tanh(x * 0.5) * 0.5 + 0.5
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        y = self.outputs[0]()
+        gx = gy * y * (1 - y)
+        return gx
+
+def sigmoid(x):
+    return Sigmoid()(x)
 
 class Mean(Function):
     def __init__(self, axis, keepdims):
@@ -223,3 +259,24 @@ class MeanSquaredError(Function):
 
 def mean_squared_error(x0, x1):
     return MeanSquaredError()(x0, x1)
+
+class Linear(Function):
+    def forward(self, x, W, b):
+        y = x.dot(W)
+        if b is not None:
+            y += b
+        return y
+    
+    def backward(self, gy):
+        x, W, b = self.inputs
+        gx = matmul(gy, W.T)
+        gW = matmul(x.T, gy)
+        if b.data is not None:
+            gb = sum_to(gy, b.shape)
+        else:
+            gb = None
+        return gx, gW, gb
+
+def linear(x, W, b=None):
+    return Linear()(x, W, b)
+

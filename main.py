@@ -16,7 +16,7 @@ class Linear:
 
 
     def predict(self, x):
-        y = F.matmul(x, self.W) + self.b
+        y = F.linear(x, self.W, self.b)
         if self.normalize:
             y = self.normalize(y)
         if self.activation:
