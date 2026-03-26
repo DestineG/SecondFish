@@ -66,3 +66,63 @@ class Transpose(Function):
 
 def transpose(x):
     return Transpose()(x)
+
+class SumTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        from .utils import sum_to
+        self.x_shape = x.shape
+        y = sum_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+def sum_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return SumTo(shape)(x)
+
+class BroadcastTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+    
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.broadcast_to(x, self.x_shape)
+        return y
+    
+    def backward(self, gy):
+        gx = sum_to(gy, self.x_shape)
+        return gx
+
+def broadcast_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return BroadcastTo(shape)(x)
+
+class Sum(Function):
+    def __init__(self, axis, keepdims):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.sum(axis=self.axis, keepdims=self.keepdims)
+        return y
+
+    def backward(self, gy):
+        from .utils import reshape_sum_backward
+        # grad 形状匹配
+        gy = reshape_sum_backward(gy, self.x_shape, self.axis,
+                                        self.keepdims)
+        
+        # grad 广播
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+def sum(x, axis=None, keepdims=False):
+    return Sum(axis, keepdims)(x)

@@ -108,6 +108,10 @@ class Variable:
     @property
     def T(self):
         return self.transpose()
+    
+    def sum(self, axis=None, keepdims=False):
+        from . import functions as F
+        return F.sum(self, axis, keepdims)
 
     @classmethod
     def test(cls):

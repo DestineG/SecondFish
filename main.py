@@ -7,28 +7,27 @@ from src import Variable, plot_dot_graph
 import src.functions as F
 
 def main():
-    x = Variable(np.array([[1,2,3], [1,2,3]]), name="x")
-    y = F.transpose(x)
-    y1 = x.T
-    y2 = x.transpose()
-    
-    x.clear_grad()
+    x = Variable(np.array([1, 2, 3, 4, 5, 6]))
+    y = F.sum(x)
     y.backward()
-
     print(y)
-    print(x.get_grad())
+    print(x.grad)
 
-    x.clear_grad()
-    y1.backward()
-
+    x = Variable(np.array([[1, 2, 3], [4, 5, 6]]))
+    y = F.sum(x)
+    y.backward()
     print(y)
-    print(x.get_grad())
+    print(x.grad)
 
-    x.clear_grad()
-    y2.backward()
-
+    x = Variable(np.array([[1, 2, 3], [4, 5, 6]]))
+    y = F.sum(x, axis=0)
+    y.backward()
     print(y)
-    print(x.get_grad())
+    print(x.grad)
+
+    x = Variable(np.random.randn(2, 3, 4, 5))
+    y = x.sum(keepdims=True)
+    print(y.shape)
     
 
 if __name__ == "__main__":
