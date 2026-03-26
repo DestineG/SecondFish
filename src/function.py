@@ -49,10 +49,17 @@ class Function:
 
 class Add(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
-        return x0 + x1
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
+        y = x0 + x1
+        return y
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return gy, gy
+        from . import functions as F
+        gx0, gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = F.sum_to(gx0, self.x0_shape)
+            gx1 = F.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 def add(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
@@ -60,10 +67,17 @@ def add(x0: Variable, x1) -> Variable:
 
 class Sub(Function):
     def forward(self, x0: np.ndarray, x1: np.ndarray) -> np.ndarray:
-        return x0 - x1
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
+        y = x0 - x1
+        return y
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return gy, -gy
+        from . import functions as F
+        gx0, gx1 = gy, -gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = F.sum_to(gx0, self.x0_shape)
+            gx1 = F.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 def sub(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
@@ -78,8 +92,13 @@ class Mul(Function):
         return x0 * x1
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        from . import functions as F
         x0, x1 = self.inputs
-        return gy * x1, gy * x0
+        gx0, gx1 = gy * x1, gy * x0
+        if x0.shape != x1.shape:
+            gx0 = F.sum_to(gx0, x0.shape)
+            gx1 = F.sum_to(gx1, x1.shape)
+        return gx0, gx1
 
 def mul(x0: Variable, x1) -> Variable:
     x1 = as_array(x1)
@@ -90,9 +109,13 @@ class Div(Function):
         return x0 / x1
 
     def backward(self, gy: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        from . import functions as F
         x0, x1 = self.inputs
         gx0 = gy / x1
         gx1 = gy * (-x0 / x1 ** 2)
+        if x0.shape != x1.shape:
+            gx0 = F.sum_to(gx0, x0.shape)
+            gx1 = F.sum_to(gx1, x1.shape)
         return gx0, gx1
 
 def div(x0: Variable, x1) -> Variable:

@@ -82,6 +82,8 @@ class SumTo(Function):
         return gx
 
 def sum_to(x, shape):
+    '''用 sum 对输入 x 进行 rehsape 至 shape
+    '''
     if x.shape == shape:
         return as_variable(x)
     return SumTo(shape)(x)
