@@ -1,10 +1,16 @@
 [project]
 name = "secondfish"
 version = "0.1.0"
-description = "Add your description here"
+description = "A DeZero-style deep learning framework from scratch"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "matplotlib>=3.10.8",
     "numpy>=2.4.3",
+]
+
+# 定义可选依赖
+[project.optional-dependencies]
+torch = [
+    "torch>=2.0.0",
 ]
