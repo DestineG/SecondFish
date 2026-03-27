@@ -62,6 +62,10 @@ class Log(Function):
 def log(x):
     return Log()(x)
 
+# ===============================================================
+# 激活函数
+# ===============================================================
+
 class ReLU(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
         return np.maximum(0, x)
@@ -74,6 +78,21 @@ class ReLU(Function):
 def relu(x):
     return ReLU()(x)
 
+class LeakyReLU(Function):
+    def __init__(self, alpha=0.2):
+        self.alpha = alpha
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return np.where(x > 0, x, self.alpha * x)
+
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        x = self.inputs[0].data
+        gx = gy * np.where(x > 0, 1, self.alpha)
+        return gx
+
+def leaky_relu(x, alpha=0.2):
+    return LeakyReLU(alpha)(x)
+
 class Sigmoid(Function):
     def forward(self, x: np.ndarray) -> np.ndarray:
         return np.tanh(x * 0.5) * 0.5 + 0.5
@@ -85,6 +104,45 @@ class Sigmoid(Function):
 
 def sigmoid(x):
     return Sigmoid()(x)
+
+class Softmax(Function):
+    def __init__(self, axis=1):
+        super().__init__()
+        self.axis = axis
+    
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        x = x - x.max(axis=self.axis, keepdims=True)  # 数值稳定化: Softmax(x) == Softmax(x - c)
+        exp_x = np.exp(x)
+        y = exp_x / exp_x.sum(axis=self.axis, keepdims=True)
+        return y
+    
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        y = self.outputs[0]()
+        gx = gy - (gy * y).sum(axis=self.axis, keepdims=True)
+        gx *= y
+        return gx
+
+def softmax(x, axis=1):
+    return Softmax(axis)(x)
+
+class LogSoftmax(Function):
+    def __init__(self, axis=1):
+        super().__init__()
+        self.axis = axis
+    
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        x = x - x.max(axis=self.axis, keepdims=True)  # 数值稳定化: LogSoftmax(x) == LogSoftmax(x - c)
+        log_sum_exp = np.log(np.exp(x).sum(axis=self.axis, keepdims=True))
+        y = x - log_sum_exp
+        return y
+    
+    def backward(self, gy: np.ndarray) -> np.ndarray:
+        y = self.outputs[0]()
+        gx = gy - np.exp(y) * (gy.sum(axis=self.axis, keepdims=True))
+        return gx
+
+def logsoftmax(x, axis=1):
+    return LogSoftmax(axis)(x)
 
 class Mean(Function):
     def __init__(self, axis, keepdims):
@@ -116,6 +174,10 @@ class Mean(Function):
 
 def mean(x, axis=None, keepdims=False):
     return Mean(axis, keepdims)(x)
+
+# ===============================================================
+# normalize | batch_normalization
+# ===============================================================
 
 class Normalize(Function):
     def __init__(self, axis=-1):
@@ -244,6 +306,64 @@ class MatMul(Function):
 def matmul(x, W):
     return MatMul()(x, W)
 
+# ===============================================================
+# max | min | clip
+# ===============================================================
+
+from .utils import max_backward_shape
+
+class Max(Function):
+    def __init__(self, axis=None, keepdims=False):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        y = x.max(axis=self.axis, keepdims=self.keepdims)
+        return y
+    
+    def backward(self, gy):
+        x = self.inputs[0]
+        y = self.outputs[0]()
+        shape = max_backward_shape(x, self.axis)
+        gy = reshape(gy, shape)
+        y = reshape(y, shape)
+        cond = (x.data == y.data)
+        gy = broadcast_to(gy, cond.shape)
+        return gy * cond
+
+def max(x, axis=None, keepdims=False):
+    return Max(axis, keepdims)(x)
+
+class Min(Max):
+    def forward(self, x):
+        y = x.min(axis=self.axis, keepdims=self.keepdims)
+        return y
+
+def min(x, axis=None, keepdims=False):
+    return Min(axis, keepdims)(x)
+
+class Clip(Function):
+    def __init__(self, x_min, x_max):
+        self.x_min = x_min
+        self.x_max = x_max
+
+    def forward(self, x):
+        y = np.clip(x, self.x_min, self.x_max)
+        return y
+
+    def backward(self, gy):
+        x, = self.inputs
+        mask = (x.data >= self.x_min) * (x.data <= self.x_max)
+        gx = gy * mask
+        return gx
+
+def clip(x, x_min, x_max):
+    return Clip(x_min, x_max)(x)
+
+# ===============================================================
+# 损失函数
+# ===============================================================
+
 class MeanSquaredError(Function):
     def forward(self, x0, x1):
         diff = x0 - x1
@@ -259,6 +379,51 @@ class MeanSquaredError(Function):
 
 def mean_squared_error(x0, x1):
     return MeanSquaredError()(x0, x1)
+
+class SoftmaxCrossEntropy(Function):
+    def forward(self, x, t):
+        y = softmax(x)
+        self.y = y
+        self.t = t
+        loss = mean(-log(y[np.arange(len(t)), t]))
+        return loss
+
+    def backward(self, gy):
+        x, t = self.inputs
+        y = self.y
+        batch_size = len(t)
+        gx = y.copy()
+        gx[np.arange(batch_size), t] -= 1
+        gx *= gy / batch_size
+        return gx, None
+
+def softmax_cross_entropy(x, t):
+    return SoftmaxCrossEntropy()(x, t)
+
+def sigmoid_cross_entropy(x, t):
+    if x.ndim != t.ndim:
+        t = t.reshape(*x.shape)
+    x, t = as_variable(x), as_variable(t)
+    N = len(x)
+    p = sigmoid(x)
+    p = clip(p, 1e-15, 1.0)
+    tlog_p = t * log(p) + (1 - t) * log(1 - p)
+    y = -1 * sum(tlog_p) / N
+    return y
+
+
+def binary_cross_entropy(p, t):
+    if p.ndim != t.ndim:
+        t = t.reshape(*p.shape)
+    N = len(t)
+    p = clip(p, 1e-15, 0.999)
+    tlog_p = t * log(p) + (1 - t) * log(1 - p)
+    y = -1 * sum(tlog_p) / N
+    return y
+
+# ===============================================================
+# 算子 linear | conv | deconv | pooling
+# ===============================================================
 
 class Linear(Function):
     def forward(self, x, W, b):
